@@ -57,17 +57,18 @@ functions {
 
 data{
     
-    
+  
   int<lower=0> N_sn;           // Number of supernovae
   real<lower=0> h0;
   vector[N_sn] zcmb;           //  redshifts
-  vector[N_sn] c_obs;             // Observerd color
-  vector[N_sn] c_sigma;             // Observerd color err
-  vector[N_sn] x1_obs;             // Observerd x1
-  vector[N_sn] x1_sigma;             // Observerd x1 err
   vector[N_sn] m_obs;             // Observerd m
   vector[N_sn] m_sigma;             // Observerd m err
-   
+
+
+  int N_model;
+  vector[N_model] z_model;
+
+  
 }    
    
 
@@ -77,19 +78,11 @@ parameters {
   real<lower=0, upper=1> Om; // yes, I do not have to explain
   real<lower=-20.,upper=-18.> M0; // intrinsic brightness
   real<lower=-3., upper=-0.> tau_log;
-  real<lower=-2, upper=-0.4> w;  
-  real<lower=-.2, upper=.3> taninv_alpha;
-  real<lower=-1.4, upper=1.4> taninv_beta;
+  real<lower=-2, upper=-0.0> w;  
     
-  real xm;
-  real cm;
-  real<lower=-.5, upper=.5> Rx_log;
-  real<lower=-1.5, upper=1.5> Rc_log;
-    
-    
-    
-  vector[N_sn] x1_latent;      // 
-  vector[N_sn] c_latent;      // 
+        
+  vector<lower=-10, upper=10>[N_sn] x1_latent;      // 
+  vector<lower=-5, upper=5>[N_sn] c_latent;      // 
     
   vector[N_sn] mb;
     
@@ -101,10 +94,7 @@ parameters {
 
 transformed parameters {
     
-  real Rx;
-  real Rc;
-  real alpha;
-  real beta;
+
   real tau;
   real Ode = 1-Om;
   real wp1 = w+1;
@@ -112,11 +102,7 @@ transformed parameters {
   vector[N_sn] dist_mods_latent;
   vector[N_sn] m_latent;
   
-  Rx = pow(10.,Rx_log);
-  Rc = pow(10.,Rc_log);
   tau = pow(10.,tau_log);
-  alpha = tan(taninv_alpha);
-  beta = tan(taninv_beta);
 
   for(n in 1:N_sn){
 
@@ -125,7 +111,7 @@ transformed parameters {
   }
 
 
-  m_latent = M0 +  dist_mods_latent - alpha*x1_latent + beta*c_latent;
+  m_latent = M0 +  dist_mods_latent;
     
 }
 
@@ -133,27 +119,14 @@ transformed parameters {
 
 
 model {
-  
-  xm ~ cauchy(0,1);
-  cm ~ cauchy(0,.3);
-  
-  x1_latent ~ normal(xm,Rx);
-  c_latent ~ normal(cm,Rc);
-  
+    
   mb ~ normal( m_latent, tau);
-  
-  c_obs ~ normal(c_latent,c_sigma);
-  x1_obs ~ normal(x1_latent, x1_sigma);
   m_obs ~ normal(mb, m_sigma);
 
 } 
 
 generated quantities {
 
-
-  vector[N_sn] c_obs_ppc;
-  vector[N_sn] x1_obs_ppc;
-  vector[N_sn] m_obs_ppc;
 
   vector[N_model] mb_curve;
   vector[N_model] mu_curve;
@@ -165,17 +138,8 @@ generated quantities {
 
   }
 
+  mb_curve = M0 + mu_curve;
 
-
-
-  
-  for (n in 1:N_sn) {
-
-    c_obs_ppc[n] = normal_rng(c_latent[n], c_sigma[n]);
-    x1_obs_ppc[n] = normal_rng(x1_latent[n], x1_sigma[n]);
-    m_obs_ppc[n] = normal_rng(m_latent[n], m_sigma[n]);
-
-  }
 
 }
 
